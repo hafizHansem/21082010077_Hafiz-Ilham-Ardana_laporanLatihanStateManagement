@@ -1,77 +1,89 @@
-import 'package:flutter/material.dart'; // Import package flutter untuk UI
-import 'package:flutter_bloc/flutter_bloc.dart'; // Import package flutter_bloc untuk integrasi dengan Cubit
-import 'universities_cubit.dart'; //Import file universities_cubit.dart
+// Import library Flutter untuk membuat aplikasi mobile
+import 'package:flutter/material.dart';
+// Import library provider untuk mengelola state aplikasi
+import 'package:provider/provider.dart';
 
+// Import file university_provider.dart yang berisi class UniversityProvider
+import 'university_provider.dart';
+// Import file university.dart yang berisi class University
+import 'university.dart';
 
+// Fungsi main sebagai entry point dari aplikasi
 void main() {
+  // Menjalankan aplikasi dengan widget MyApp sebagai root widget
   runApp(MyApp());
 }
 
+// Class MyApp merupakan stateless widget utama dari aplikasi
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Universities App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
+    // Menggunakan ChangeNotifierProvider untuk menyediakan instance UniversityProvider ke seluruh aplikasi
+    return ChangeNotifierProvider(
+      create: (context) => UniversityProvider(),
+      // MaterialApp sebagai root widget untuk membangun aplikasi
+      child: MaterialApp(
+        title: 'Universities',
+        // HomePage sebagai halaman utama aplikasi
+        home: HomePage(),
       ),
-      home: HomePage(),
     );
   }
 }
 
+// Class HomePage merupakan stateless widget untuk halaman utama aplikasi
 class HomePage extends StatelessWidget {
-  final universitiesCubit = UniversitiesCubit(); // Instance dari UniversitiesCubit
+  // List negara-negara ASEAN untuk dipilih dalam dropdown
+  final List<String> countries = ['Indonesia', 'Singapore', 'Malaysia'];
 
   @override
   Widget build(BuildContext context) {
+    // Menggunakan Provider.of untuk mendapatkan instance UniversityProvider
+    final universityProvider = Provider.of<UniversityProvider>(context);
+    // Scaffold sebagai struktur dasar halaman dengan app bar dan body
     return Scaffold(
       appBar: AppBar(
-        title: Text('Universities App'),
+        title: Text('Universities'),
       ),
       body: Column(
         children: [
-          BlocBuilder<UniversitiesCubit, List<University>>( // Widget untuk membangun UI berdasarkan state dari Cubit
-            bloc: universitiesCubit,
-            builder: (context, universities) {
-              return Expanded(
-                child: ListView.builder(
-                  itemCount: universities.length,
+          // DropdownButton untuk memilih negara ASEAN
+          DropdownButton<String>(
+            value: 'Indonesia', // Nilai default
+            // Saat nilai dropdown berubah, panggil fetchUniversities dari UniversityProvider
+            onChanged: (value) {
+              universityProvider.fetchUniversities(value!);
+            },
+            // Membuat list item dropdown dari countries
+            items: countries.map<DropdownMenuItem<String>>((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value),
+              );
+            }).toList(),
+          ),
+          // Expanded untuk memperluas ListView agar mengambil sisa ruang yang tersedia
+          Expanded(
+            child: Consumer<UniversityProvider>(
+              // Consumer untuk mendengarkan perubahan pada UniversityProvider
+              builder: (context, universityProvider, _) {
+                // ListView untuk menampilkan daftar universitas
+                return ListView.builder(
+                  itemCount: universityProvider.universities.length,
+                  // Membuat item dalam ListView berdasarkan data universitas
                   itemBuilder: (context, index) {
-                    final university = universities[index];
+                    University university = universityProvider.universities[index];
                     return ListTile(
-                      title: Text(university.name), // Tampilkan nama universitas
-                      subtitle: Text(university.website), // Tampilkan situs web universitas
+                      title: Text(university.name),
+                      subtitle: Text(university.website),
                     );
                   },
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-          SizedBox(height: 20),
-          _buildCountryDropdown(), // Tampilkan ComboBox untuk memilih negara ASEAN
         ],
       ),
-    );
-  }
-
-  Widget _buildCountryDropdown() {
-    return BlocBuilder<UniversitiesCubit, List<University>>( // Widget untuk membangun ComboBox
-      bloc: universitiesCubit,
-      builder: (context, _) {
-        return DropdownButton<String>(
-          hint: Text('Select Country'), // Teks hint untuk ComboBox
-          items: ['Singapore', 'Malaysia', 'Thailand', 'Vietnam', 'Philippines'] // List negara ASEAN
-              .map((country) => DropdownMenuItem<String>(
-                    value: country,
-                    child: Text(country),
-                  ))
-              .toList(),
-          onChanged: (value) {
-            universitiesCubit.fetchUniversities(value!); // Panggil method fetchUniversities ketika negara dipilih
-          },
-        );
-      },
     );
   }
 }
